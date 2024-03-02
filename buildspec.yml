@@ -1,0 +1,29 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - mkdir /home/.kube
+      - cp config /home/.kube/
+      - curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/arm64/kubectl
+      - chmod +x ./kubectl
+      - mv -f ./kubectl /usr/local/bin/kubectl
+      - ls
+      - kubectl  --kubeconfig  /home/.kube/config version
+      - kubectl  --kubeconfig  /home/.kube/config get svc
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 232100869787.dkr.ecr.us-east-1.amazonaws.com
+      - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/i7m0t5d2
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...          
+      - docker build -t 2048game  .  
+      - docker tag 2048game:latest public.ecr.aws/i7m0t5d2/2048game:latest
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push public.ecr.aws/i7m0t5d2/2048game:latest
+      # - kubectl  --kubeconfig  /home/.kube/config delete deployment.apps/game-deployment
+      - kubectl  --kubeconfig  /home/.kube/config apply -f service.yaml
